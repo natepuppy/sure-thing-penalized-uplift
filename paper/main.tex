@@ -1,0 +1,505 @@
+\documentclass[10pt]{article}
+
+% --- Page geometry ---
+\usepackage[margin=1in]{geometry}
+
+% --- Encoding and fonts ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+% --- Math ---
+\usepackage{amsmath,amssymb,amsthm}
+
+% --- Figures and tables ---
+\usepackage{graphicx}
+% \figinclude{path}: include figure if file exists, else show placeholder box
+\newcommand{\figinclude}[1]{%
+  \IfFileExists{#1}%
+    {\includegraphics[width=\linewidth]{#1}}%
+    {\begin{center}\fbox{\parbox{0.7\linewidth}{\centering
+      \textit{[Figure pending --- run analysis/figures.py]}
+    }}\end{center}}%
+}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+
+% --- Colors and hyperlinks ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=MidnightBlue,citecolor=MidnightBlue,urlcolor=MidnightBlue]{hyperref}
+
+% --- Bibliography ---
+\usepackage[numbers,sort&compress]{natbib}
+
+% --- Misc ---
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{xspace}
+
+% --- Theorem environments ---
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+
+% --- Custom commands ---
+\newcommand{\cate}{\tau(X)}
+\newcommand{\EE}{\mathbb{E}}
+\newcommand{\stpu}{\texttt{STPU}\xspace}
+\newcommand{\mstpu}{\texttt{MSTPU}\xspace}
+\newcommand{\causalforest}{\texttt{CausalForest}\xspace}
+\newcommand{\rlearner}{\texttt{R-Learner}\xspace}
+\newcommand{\tlearner}{\texttt{T-Learner}\xspace}
+\newcommand{\ghat}{\hat{g}(X)}
+\newcommand{\tauhat}{\hat{\tau}(X)}
+
+% --- Title ---
+\title{%
+  \textbf{Can We Fix Wasted Ad Spend by Re-ranking Users?}\\[4pt]
+  \large Sure-Thing Penalized Uplift: A Study of What Works and What Doesn't
+}
+
+\author{%
+  Nathan Clark\\
+  Independent Researcher\\
+  \texttt{nathan.clark.dev@gmail.com}
+}
+
+\date{}
+
+% ============================================================
+\begin{document}
+\maketitle
+
+% ============================================================
+\begin{abstract}
+When you run an ad campaign, a big chunk of your budget goes to users who
+would have bought anyway---they don't need the ad at all.
+Our earlier work \citep{clark2025benchmarking} showed that all standard models
+waste 86--92\% of their targeting budget this way, and that better model
+accuracy doesn't fix it.
+
+This paper tests a natural fix: lower the score of users who already have a
+high chance of buying without the ad.  We call this Sure-Thing Penalized Uplift
+(STPU).  We tested two versions:
+\textbf{Additive STPU}---subtract a penalty from the score---and
+\textbf{Multiplicative STPU} (MSTPU)---multiply the score by how much ``room''
+the user has to be influenced.
+
+The short version: neither works.
+
+Additive STPU always makes things worse.  The reason is a simple numbers
+problem: the penalty we subtract is 2--5$\times$ larger in scale than the
+scores themselves, so the penalty takes over and we end up targeting the wrong
+people entirely.  Multiplicative STPU fixes that scale problem but still shows
+no consistent improvement across 567 experiments---it's basically a coin flip.
+
+The deeper reason neither approach works is that at a 5\% conversion rate,
+fewer than 7\% of users actually benefit from an ad on any given day.
+Even a perfect model could only reduce budget waste to 78\%; the best real
+models sit at 86--92\%.  That remaining gap can't be closed by re-ranking,
+because there just isn't enough signal in binary (yes/no) conversion data to
+reliably identify those rare responsive users.
+
+Fixing budget waste requires richer data---like revenue per user or multiple
+touchpoints---not smarter sorting of noisy binary signals.
+\end{abstract}
+
+% ============================================================
+\section{The Problem We're Trying to Solve}
+\label{sec:intro}
+
+Imagine you're deciding which 30\% of users to show an ad to.
+The goal is to pick the users who will actually buy \emph{because} of the ad,
+not users who would buy regardless.
+
+The people who would buy regardless are called \textbf{sure-things}.
+Showing them an ad wastes money with zero upside.
+A user who only buys when shown an ad is a \textbf{persuadable}---the ideal target.
+And a user who is \emph{less} likely to buy after seeing an ad is a
+\textbf{sleeping dog}---actively harmful to target.
+
+Uplift models try to estimate the \emph{incremental effect} of showing an ad:
+\begin{equation}
+  \tau(X) = \EE\bigl[\text{buy with ad} - \text{buy without ad} \;\big|\; \text{user features } X\bigr]
+\end{equation}
+This is called the Conditional Average Treatment Effect (CATE).
+A persuadable has $\tau > 0$; a sure-thing has $\tau \approx 0$;
+a sleeping dog has $\tau < 0$.
+
+\paragraph{The core failure.}
+Our earlier paper \citep{clark2025benchmarking} showed that even the best
+uplift models---including the state-of-the-art Causal Forest---waste 86--92\%
+of their top-30\% targeting budget.  Worse, making the model more accurate
+(lower PEHE error) doesn't fix this.  Sure-things have high predicted
+conversion rates, and models keep mistaking ``likely to buy'' for
+``incrementally valuable.''
+
+\paragraph{The proposed fix.}
+Here's the intuition: if a user has a high chance of buying even without the ad
+(call this $\hat{g}(X)$, estimated from people who \emph{weren't} shown ads),
+they're probably a sure-thing.  So penalize their score:
+\begin{equation}
+  \text{score}(X) = \tauhat - \beta \cdot \ghat
+\end{equation}
+This is STPU. We test whether it works, why it fails, and what to do instead.
+
+\paragraph{What this paper contributes.}
+\begin{enumerate}[topsep=2pt,itemsep=1pt]
+  \item We show additive STPU always makes things worse, and explain why
+    (a scale mismatch---\S\ref{sec:failure}).
+  \item We propose and test a scale-invariant alternative, Multiplicative STPU
+    (\S\ref{sec:mstpu}).
+  \item We show that neither version works across 567 experiments and explain
+    the fundamental limit that prevents any re-ranking approach from working here
+    (\S\ref{sec:results}).
+\end{enumerate}
+
+% ============================================================
+\section{Setup and Metrics}
+\label{sec:background}
+
+\paragraph{How we measure waste.}
+We simulate running an ad campaign and targeting the top 30\% of users by
+predicted score.  Then we check: what fraction of those targeted users had
+a true incremental effect near zero (i.e., they were non-incrementals)?
+That's \textbf{wasted spend}.  Lower is better.
+
+We also track \textbf{iROAS efficiency}: the average true lift of targeted
+users, expressed as a fraction of what a perfect oracle would achieve.
+Higher is better. An iROAS of 0.5 means we're getting half the value we
+could with perfect information.
+
+\paragraph{Baseline conversion probability.}
+$\hat{g}(X)$ is our estimate of ``how likely is this user to buy without
+an ad?''  We estimate it by training a classifier on just the control group
+(users who were never shown an ad).  Sure-things have high $\hat{g}$;
+persuadables have low $\hat{g}$.  This is the signal STPU tries to use.
+
+\paragraph{What we tested.}
+We ran experiments on three synthetic datasets (linear effects, nonlinear
+effects, and mixed subgroups), three model families (Causal Forest, R-Learner,
+T-Learner), at five confounding levels, using 20,000 users per run.
+All told: 567 experiment configurations.
+
+% ============================================================
+\section{Why Additive STPU Fails: A Scale Problem}
+\label{sec:failure}
+
+\subsection{The idea behind it}
+
+The additive STPU score is:
+\begin{equation}
+  s(X;\beta) = \underbrace{\tauhat}_{\text{estimated lift}} -
+               \beta \cdot \underbrace{\ghat}_{\text{organic conversion rate}}
+  \label{eq:additive}
+\end{equation}
+The logic: if the model overestimates lift for sure-things (because it
+confuses ``they buy a lot'' with ``they respond to ads''), subtracting
+their organic rate should cancel that out.
+
+\subsection{The problem: the numbers are on completely different scales}
+
+Here's the catch.  With a 5\% base conversion rate:
+\begin{itemize}[topsep=2pt,itemsep=1pt]
+  \item $\hat{g}(X)$ is a probability between 0 and 1.
+    Across users, it typically has a standard deviation of 0.05--0.10.
+  \item $\hat{\tau}(X)$ is the \emph{difference} between two probabilities.
+    For rare events, this is much smaller---standard deviation
+    around 0.02--0.04, even for the best models.
+\end{itemize}
+
+That means $\hat{g}$ is 2--5$\times$ ``louder'' than $\hat{\tau}$.
+At $\beta = 0.5$, the penalty term $\beta \cdot \hat{g}$ has roughly
+$4\times$ the variance of $\hat{\tau}$.  The penalty drowns out the
+signal, and we end up ranking users by \emph{lowest organic conversion}
+rather than highest lift.  That's basically backwards.
+
+\paragraph{The data backs this up.}
+Across every configuration we tested, additive STPU at any $\beta > 0$
+made wasted spend \emph{worse}---never better.
+Figure~\ref{fig:additive_failure} shows the effect of increasing $\beta$:
+wasted spend climbs monotonically, no matter which DGP or model we use.
+
+\begin{figure}[t]
+  \centering
+  \figinclude{figures/fig2_additive_failure.pdf}
+  \caption{Wasted spend and iROAS efficiency as we increase the penalty $\beta$
+    (Causal Forest, moderate confounding, 5\% conversion rate).
+    As $\beta$ increases, wasted spend gets steadily worse across all datasets.
+    iROAS can improve slightly because the penalty pushes out sleeping dogs
+    (users who are actually hurt by ads), but this comes at the cost of also
+    pushing out persuadables.}
+  \label{fig:additive_failure}
+\end{figure}
+
+% ============================================================
+\section{A Better Formulation: Multiplicative STPU}
+\label{sec:mstpu}
+
+\subsection{The idea}
+
+Instead of subtracting $\hat{g}$, we \emph{multiply} $\hat{\tau}$ by
+how much room there is to influence the user:
+\begin{equation}
+  s(X) = \tauhat \cdot \bigl(1 - \ghat\bigr)
+  \label{eq:multiplicative}
+\end{equation}
+We call this Multiplicative STPU, or \mstpu.
+
+Think of $(1 - \hat{g})$ as a ``persuadability weight.''  A user who
+already has a 90\% chance of buying gets a weight of 0.10---their score
+gets cut to 10\% of what it was.  A user with a 5\% organic conversion
+rate gets a weight of 0.95---barely changed.
+
+\subsection{Why this fixes the scale problem}
+
+$(1-\hat{g})$ is always between 0 and 1, so it acts as a proportional
+shrinkage, not an additive offset.  The sign and rough magnitude of the
+score stay the same as $\hat{\tau}$.  No $\beta$ to tune.
+
+Mathematically, for a sure-thing ($\tau \approx 0$, $\hat{g} \approx$ high):
+$s = 0 \times \text{something} \approx 0$---correctly depressed.
+For a persuadable ($\tau > 0$, $\hat{g} \approx$ low):
+$s \approx \hat{\tau} \times 0.95 \approx \hat{\tau}$---barely changed.
+
+\subsection{How to use it}
+
+\begin{algorithm}[H]
+\caption{Multiplicative STPU in practice}
+\begin{algorithmic}[1]
+  \Require Training data, a base uplift model
+  \State Train your uplift model normally; get predicted lift $\hat{\tau}(X)$ for each user
+  \State Train a separate classifier on the \emph{control group only} (no-ad users);
+         get predicted organic conversion $\hat{g}(X)$
+  \State Multiply: $\text{score} = \hat{\tau}(X) \times (1 - \hat{g}(X))$
+  \State Target the top $k$\% by this new score
+\end{algorithmic}
+\end{algorithm}
+
+% ============================================================
+\section{Results: Neither Approach Consistently Helps}
+\label{sec:results}
+
+\subsection{The headline number}
+
+Multiplicative STPU improves iROAS efficiency in 48\% of our 567 experiments.
+That's statistically the same as a coin flip.
+
+The typical improvement when it does help: $+0.001$ to $+0.003$ percentage
+points in iROAS.  That's below the noise level across random seeds.
+Figure~\ref{fig:main_result} shows the distribution of gains---mixed positive
+and negative with no clear pattern.
+
+\begin{figure}[t]
+  \centering
+  \figinclude{figures/fig1_main_result.pdf}
+  \caption{The iROAS improvement from switching to \mstpu\ vs.\ the base model.
+    Positive bars mean \mstpu\ helped; negative bars mean it hurt.
+    The pattern is essentially random---no dataset or model shows consistent gains.}
+  \label{fig:main_result}
+\end{figure}
+
+\subsection{Wasted spend never improves}
+
+Table~\ref{tab:main_results} shows wasted spend side-by-side for base models
+and \mstpu.  In every row, \mstpu\ leaves wasted spend flat or slightly worse.
+
+Why?  At a 5\% conversion rate, only about 6.5\% of users have realized a
+positive individual treatment effect (i.e., they actually would have bought
+because of the ad on this particular day).  Even a perfect oracle, with full
+knowledge of every user's true effect, still wastes 78\% of its targeting
+budget---because 22\% of the users it could target have positive expected effects,
+but only 6.5\% of all users showed realized $\tau = +1$ in the data.
+
+Real models sit at 86--92\% waste.  The gap between oracle (78\%) and reality
+(86--92\%) exists because of poor CATE estimation quality, not poor ranking.
+Re-ranking what we already estimated can't close a gap that was created by
+estimation error.
+
+\input{figures/tab_main_results.tex}
+
+\subsection{What \mstpu\ actually does to the targeting set}
+
+Here's something interesting.  When we look at \emph{who} gets removed from
+the top 30\% by the re-ranking:
+
+At baseline (no correction), Causal Forest's top 30\% is approximately:
+\begin{itemize}[topsep=2pt,itemsep=1pt]
+  \item \textbf{8.4\%} users who genuinely benefited from the ad ($\tau = +1$)
+  \item \textbf{83.5\%} users with zero effect ($\tau = 0$)---sure-things and lost causes
+  \item \textbf{8.1\%} users who were hurt by the ad ($\tau = -1$)---sleeping dogs
+\end{itemize}
+
+After applying \mstpu, the sleeping dog fraction drops from 8.1\% to 3.1\%.
+That's genuinely good.  But persuadables also drop from 8.4\% to 4.0\%.
+The empty slots fill back up with zero-effect users.  So the mean lift of
+targeted users actually improves (iROAS goes up), but wasted spend goes up
+too---because the definition of ``wasted'' includes zero-effect users, and
+there's now a higher fraction of them.
+
+Figure~\ref{fig:sleeping_dog} shows this pattern across all models and datasets.
+
+\begin{figure}[t]
+  \centering
+  \figinclude{figures/fig5_sleeping_dog.pdf}
+  \caption{Who's in the top 30\%? Green bars are persuadables ($\tau > 0$),
+    red bars are sleeping dogs ($\tau < 0$).  \mstpu\ cuts sleeping dogs but also
+    cuts persuadables by a similar amount, which is why wasted spend doesn't improve.}
+  \label{fig:sleeping_dog}
+\end{figure}
+
+\subsection{Why nothing can fix this: the signal just isn't there}
+
+Figure~\ref{fig:iroas_alpha} shows iROAS over different levels of confounding.
+\mstpu\ (solid lines) tracks almost exactly with the base model (dashed lines).
+There's no separation.
+
+The underlying reason: at 5\% conversion rates, the predicted effect $\hat{\tau}$
+has a standard deviation of about 0.03 across users.  But distinguishing a
+``definitely buys because of ad'' user from a ``probably doesn't'' user requires
+more separation than that.  Since \mstpu\ can only reshuffle based on
+$\hat{\tau}$ and $\hat{g}$---information we already have---it can't create
+ranking signal that wasn't there to begin with.
+
+\begin{figure}[t]
+  \centering
+  \figinclude{figures/fig4_iroas_by_alpha.pdf}
+  \caption{iROAS efficiency at different confounding levels.
+    Solid lines are \mstpu, dashed are the base model.  There's almost no
+    separation---re-ranking doesn't change performance as confounding varies.}
+  \label{fig:iroas_alpha}
+\end{figure}
+
+% ============================================================
+\section{What This Means in Practice}
+\label{sec:discussion}
+
+\paragraph{Don't use additive STPU.}
+It always makes performance worse.  The math is clear: the penalty you
+subtract is on a different scale than the scores you're adjusting, so it
+takes over the ranking and points you at the wrong users.
+
+\paragraph{\mstpu\ is harmless but not helpful.}
+It doesn't hurt (except in a random-noise sense), and it requires no tuning.
+If you want to apply it as a default, there's no real downside.  But don't
+expect it to fix wasted spend.
+
+\paragraph{The wasted spend metric can be misleading.}
+``Wasted spend'' counts both sure-things and sleeping dogs as equally bad.
+But sleeping dogs are worse than sure-things---they actively decrease
+conversion rates.  \mstpu\ actually does a decent job removing sleeping dogs
+from the targeting set.  If you track iROAS efficiency instead of raw wasted
+spend, \mstpu\ looks more useful because iROAS rewards the removal of
+negative-effect users.
+
+Our recommendation: \textbf{report iROAS efficiency as your primary metric}.
+Wasted spend alone doesn't tell you whether you're wasting budget on harmless
+sure-things or actively harmful sleeping dogs.
+
+\paragraph{How to actually reduce waste.}
+The real bottleneck isn't the ranking algorithm---it's data quality.
+With binary (yes/no) conversions at 5\%, individual users are just too noisy
+to classify reliably.  The fixes that would actually work:
+\begin{enumerate}[topsep=2pt,itemsep=1pt]
+  \item \textbf{Continuous outcomes.}  Model revenue per user, not just
+    whether they converted.  This is far less noisy and gives CATE models
+    much more to work with.
+  \item \textbf{Multi-touch data.}  If you observe the same user across
+    multiple exposures, you get repeated measurements that reduce uncertainty.
+  \item \textbf{Longer attribution windows.}  A 24-hour conversion window
+    is noisy; a 30-day window has more signal about true incrementality.
+\end{enumerate}
+
+\paragraph{One real limitation to note.}
+Our experiments used synthetic data where we know the true effects.
+In practice, $\hat{g}$ is estimated from whoever ended up in the control
+group, which may be a biased sample if treatment wasn't random.  Under
+heavy confounding, $\hat{g}$ may absorb noise from confounders and
+misidentify some persuadables as sure-things.
+
+% ============================================================
+\section{Summary}
+\label{sec:conclusion}
+
+We tested a natural-seeming fix for wasted ad spend: penalize users who
+already have high organic conversion rates.  Here's what we found:
+
+\begin{itemize}[topsep=2pt,itemsep=2pt]
+  \item \textbf{Additive STPU always makes things worse.}
+    The penalty is on a 2--5$\times$ larger scale than the lift estimates,
+    so it takes over the ranking entirely.  Users get sorted by lowest
+    organic rate, which is the wrong objective.
+
+  \item \textbf{Multiplicative STPU doesn't help either.}
+    It fixes the scale problem but shows no consistent improvement---48\%
+    win rate across 567 experiments (chance level).
+
+  \item \textbf{The gap between good models and oracle can't be closed
+    by re-ranking.}
+    At a 5\% conversion rate, only 6.5\% of users have realized positive
+    treatment effects.  Even with perfect knowledge, 78\% of your 30\%
+    targeting budget is ``wasted'' by the wasted-spend definition.  The
+    path from 86--92\% down to 78\% requires better estimation, not
+    better re-ranking.
+\end{itemize}
+
+The takeaway for practitioners: measure iROAS efficiency (not just wasted
+spend), don't apply additive STPU, and if you want to genuinely reduce waste,
+invest in richer outcome data rather than better sorting algorithms.
+
+Code and data are available at
+\href{https://github.com/natepuppy/ads-uplift-benchmark}{github.com/natepuppy/ads-uplift-benchmark}.
+
+% ============================================================
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+% ============================================================
+\appendix
+\section{The Scale Mismatch: A Formal Statement}
+\label{app:scale}
+
+For readers who want the precise version of the scale argument:
+
+\begin{proposition}
+Let $\sigma_\tau = \mathrm{std}(\tauhat)$ and $\sigma_g = \mathrm{std}(\ghat)$,
+and write $r = \sigma_g / \sigma_\tau > 1$.
+The Pearson correlation between the additive STPU score
+$s_\beta = \tauhat - \beta\,\ghat$ and the base score $\tauhat$ satisfies:
+\begin{equation}
+  \mathrm{corr}(s_\beta,\, \tauhat) \;\leq\;
+    \frac{1}{\sqrt{1 + (\beta r)^2 (1 - \rho_{t,g}^2)}}
+\end{equation}
+where $\rho_{t,g} = \mathrm{corr}(\tauhat, \ghat)$.
+\end{proposition}
+
+In plain English: as you increase $\beta$, the STPU score ranking diverges
+from the original lift-based ranking.  At $r \approx 2.5$ (what we observe
+empirically) and $\beta = 0.5$, the correlation drops to 0.68---meaning about
+a third of the ranking information has been replaced by ``who has the lowest
+organic rate.''
+
+The proof follows from expanding $\mathrm{Var}(s_\beta)$ and
+$\mathrm{Cov}(s_\beta, \tauhat)$ using standard covariance rules.
+
+\section{Full Beta Sweep Results}
+\label{app:beta}
+
+Figure~\ref{fig:beta_sensitivity} shows wasted spend at each tested $\beta$
+value, for all DGP/model combinations.  Every single panel shows wasted spend
+flat or increasing as $\beta$ grows.  There is no setting where increasing the
+additive penalty helps.
+
+\begin{figure}[H]
+  \centering
+  \figinclude{figures/fig3_beta_sensitivity.pdf}
+  \caption{Wasted spend vs.\ $\beta$ across all datasets and models.
+    The dashed horizontal line marks the base model ($\beta = 0$).
+    Every panel shows the same pattern: increasing $\beta$ never helps.}
+  \label{fig:beta_sensitivity}
+\end{figure}
+
+\end{document}

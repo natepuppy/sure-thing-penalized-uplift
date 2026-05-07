@@ -1,0 +1,15 @@
+\begin{thebibliography}{1}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Clark(2025)]{clark2025benchmarking}
+Nathan Clark.
+\newblock Benchmarking uplift models under realistic confounding: A controlled
+  study in ad incrementality estimation.
+\newblock \emph{arXiv preprint}, 2025.
+\newblock Paper 1 of this series.
+
+\end{thebibliography}

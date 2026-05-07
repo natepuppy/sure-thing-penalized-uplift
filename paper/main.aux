@@ -1,0 +1,65 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{clark2025benchmarking}
+\citation{clark2025benchmarking}
+\@writefile{toc}{\contentsline {section}{\numberline {1}The Problem We're Trying to Solve}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{The Problem We're Trying to Solve}{section.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{The core failure.}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The proposed fix.}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What this paper contributes.}{2}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Setup and Metrics}{2}{section.2}\protected@file@percent }
+\newlabel{sec:background}{{2}{2}{Setup and Metrics}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{How we measure waste.}{2}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Baseline conversion probability.}{2}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What we tested.}{2}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Why Additive STPU Fails: A Scale Problem}{2}{section.3}\protected@file@percent }
+\newlabel{sec:failure}{{3}{2}{Why Additive STPU Fails: A Scale Problem}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}The idea behind it}{2}{subsection.3.1}\protected@file@percent }
+\newlabel{eq:additive}{{3}{2}{The idea behind it}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The problem: the numbers are on completely different scales}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Wasted spend and iROAS efficiency as we increase the penalty $\beta $ (Causal Forest, moderate confounding, 5\% conversion rate). As $\beta $ increases, wasted spend gets steadily worse across all datasets. iROAS can improve slightly because the penalty pushes out sleeping dogs (users who are actually hurt by ads), but this comes at the cost of also pushing out persuadables.}}{3}{figure.caption.8}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:additive_failure}{{1}{3}{Wasted spend and iROAS efficiency as we increase the penalty $\beta $ (Causal Forest, moderate confounding, 5\% conversion rate). As $\beta $ increases, wasted spend gets steadily worse across all datasets. iROAS can improve slightly because the penalty pushes out sleeping dogs (users who are actually hurt by ads), but this comes at the cost of also pushing out persuadables}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {paragraph}{The data backs this up.}{3}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}A Better Formulation: Multiplicative STPU}{3}{section.4}\protected@file@percent }
+\newlabel{sec:mstpu}{{4}{3}{A Better Formulation: Multiplicative STPU}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}The idea}{3}{subsection.4.1}\protected@file@percent }
+\newlabel{eq:multiplicative}{{4}{3}{The idea}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Why this fixes the scale problem}{3}{subsection.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The iROAS improvement from switching to \texttt  {MSTPU}\xspace  \ vs.\ the base model. Positive bars mean \texttt  {MSTPU}\xspace  \ helped; negative bars mean it hurt. The pattern is essentially random---no dataset or model shows consistent gains.}}{4}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:main_result}{{2}{4}{The iROAS improvement from switching to \mstpu \ vs.\ the base model. Positive bars mean \mstpu \ helped; negative bars mean it hurt. The pattern is essentially random---no dataset or model shows consistent gains}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}How to use it}{4}{subsection.4.3}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Multiplicative STPU in practice}}{4}{algorithm.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results: Neither Approach Consistently Helps}{4}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{4}{Results: Neither Approach Consistently Helps}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}The headline number}{4}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Wasted spend never improves}{4}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}What \texttt  {MSTPU}\xspace  \ actually does to the targeting set}{4}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Benchmark results: base model vs.\ Multiplicative STPU ($\alpha =1.0$, $\rho =0.05$, mean over 5 seeds). $\downarrow $ better for wasted spend; $\uparrow $ better for iROAS.}}{5}{table.caption.10}\protected@file@percent }
+\newlabel{tab:main_results}{{1}{5}{Benchmark results: base model vs.\ Multiplicative STPU ($\alpha =1.0$, $\rho =0.05$, mean over 5 seeds). $\downarrow $ better for wasted spend; $\uparrow $ better for iROAS}{table.caption.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Who's in the top 30\%? Green bars are persuadables ($\tau > 0$), red bars are sleeping dogs ($\tau < 0$). \texttt  {MSTPU}\xspace  \ cuts sleeping dogs but also cuts persuadables by a similar amount, which is why wasted spend doesn't improve.}}{5}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:sleeping_dog}{{3}{5}{Who's in the top 30\%? Green bars are persuadables ($\tau > 0$), red bars are sleeping dogs ($\tau < 0$). \mstpu \ cuts sleeping dogs but also cuts persuadables by a similar amount, which is why wasted spend doesn't improve}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Why nothing can fix this: the signal just isn't there}{5}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces iROAS efficiency at different confounding levels. Solid lines are \texttt  {MSTPU}\xspace  , dashed are the base model. There's almost no separation---re-ranking doesn't change performance as confounding varies.}}{6}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:iroas_alpha}{{4}{6}{iROAS efficiency at different confounding levels. Solid lines are \mstpu , dashed are the base model. There's almost no separation---re-ranking doesn't change performance as confounding varies}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}What This Means in Practice}{6}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{6}{What This Means in Practice}{section.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Don't use additive STPU.}{6}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{\texttt  {MSTPU}\xspace  \ is harmless but not helpful.}{6}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The wasted spend metric can be misleading.}{6}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{How to actually reduce waste.}{6}{section*.16}\protected@file@percent }
+\bibstyle{plainnat}
+\bibdata{refs}
+\bibcite{clark2025benchmarking}{{1}{2025}{{Clark}}{{}}}
+\@writefile{toc}{\contentsline {paragraph}{One real limitation to note.}{7}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Summary}{7}{section.7}\protected@file@percent }
+\newlabel{sec:conclusion}{{7}{7}{Summary}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}The Scale Mismatch: A Formal Statement}{7}{appendix.A}\protected@file@percent }
+\newlabel{app:scale}{{A}{7}{The Scale Mismatch: A Formal Statement}{appendix.A}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Full Beta Sweep Results}{7}{appendix.B}\protected@file@percent }
+\newlabel{app:beta}{{B}{7}{Full Beta Sweep Results}{appendix.B}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Wasted spend vs.\ $\beta $ across all datasets and models. The dashed horizontal line marks the base model ($\beta = 0$). Every panel shows the same pattern: increasing $\beta $ never helps.}}{8}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:beta_sensitivity}{{5}{8}{Wasted spend vs.\ $\beta $ across all datasets and models. The dashed horizontal line marks the base model ($\beta = 0$). Every panel shows the same pattern: increasing $\beta $ never helps}{figure.caption.19}{}}
+\gdef \@abspage@last{8}

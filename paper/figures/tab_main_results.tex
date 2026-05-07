@@ -1,0 +1,29 @@
+\begin{table}[t]
+\centering
+\caption{Benchmark results: base model vs.\ Multiplicative STPU ($\alpha=1.0$, $\rho=0.05$, mean over 5 seeds). $\downarrow$ better for wasted spend; $\uparrow$ better for iROAS.}
+\label{tab:main_results}
+\small
+\begin{tabular}{lll rr rr rr}
+\toprule
+DGP & Model & Lrnr & \multicolumn{2}{c}{Wasted Spend $\downarrow$} & \multicolumn{2}{c}{iROAS Eff.\ $\uparrow$} & \multicolumn{2}{c}{Qini $\uparrow$} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+& & & Base & MSTPU & Base & MSTPU & Base & MSTPU \\
+\midrule
+\multicolumn{9}{l}{\textit{Linear CATE}} \\
+  & CausalForest & RF & 0.921 & $0.922$ & 0.050 & $0.050$ & -0.099 & -0.098 \\
+  & R-Learner & LR & 0.912 & $0.914$ & 0.095 & $\mathbf{0.095}$ & 0.596 & 0.607 \\
+  & T-Learner & RF & 0.919 & $0.920$ & 0.088 & $0.082$ & 0.627 & 0.614 \\
+\midrule
+\multicolumn{9}{l}{\textit{Nonlinear CATE}} \\
+  & CausalForest & RF & 0.929 & $0.932$ & 0.022 & $0.015$ & -0.535 & -0.545 \\
+  & R-Learner & LR & 0.916 & $0.921$ & 0.031 & $0.026$ & 0.071 & 0.009 \\
+  & T-Learner & RF & 0.923 & $0.924$ & -0.004 & $\mathbf{-0.002}$ & -0.082 & -0.088 \\
+\midrule
+\multicolumn{9}{l}{\textit{Heterogeneous CATE}} \\
+  & CausalForest & RF & 0.903 & $0.903$ & 0.006 & $\mathbf{0.009}$ & 1.199 & 1.186 \\
+  & R-Learner & LR & 0.913 & $0.915$ & 0.025 & $0.021$ & -3.053 & -2.980 \\
+  & T-Learner & RF & 0.898 & $0.899$ & 0.020 & $0.017$ & 1.400 & 1.197 \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}
